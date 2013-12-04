@@ -105,6 +105,23 @@ module Sketchup::Extensions::Diagnostics
     end
     data << SEPARATOR
 
+    if ENV['LOCALAPPDATA']
+      data << "### VirtualStore\n"
+      plugins_path = Sketchup.find_support_file('Plugins')
+      virtualstore = File.join(ENV['LOCALAPPDATA'], 'VirtualStore')
+      path = plugins_path.split(':')[1]
+      virtual_path = File.join(virtualstore, path)
+      virtual_path = File.expand_path(virtual_path)
+      if File.exist?( virtual_path )
+        filter = File.join(virtual_path, '*')
+        virtual_files = Dir.glob(filter).join("\n")
+        data << "#{virtual_files}\n"
+      else
+        data << "<no files found>\n"
+      end
+      data << SEPARATOR
+    end
+
     puts data
 
 
