@@ -62,7 +62,7 @@ module Sketchup::Extensions::Diagnostics
     # Environment
     data << "### Environment\n"
     for key, value in ENV
-      if key == 'PATH'
+      if key.upcase == 'PATH'
         paths = value.split(';')
         data << "#{key.ljust(KEY_SIZE)}: #{paths.shift}\n"
         indent = ' ' * KEY_SIZE

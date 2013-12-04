@@ -29,7 +29,7 @@ module Sketchup
   # Plugin information
   PLUGIN_ID       = 'Diagnostics'.freeze
   PLUGIN_NAME     = 'SketchUp Diagnostics Tools'.freeze
-  PLUGIN_VERSION  = '1.1.0'.freeze
+  PLUGIN_VERSION  = '1.2.0'.freeze
   
   # Resource paths
   FILENAMESPACE = File.basename(__FILE__, '.*')
