@@ -105,6 +105,23 @@ module Sketchup::Extensions::Diagnostics
     end
     data << SEPARATOR
 
+    # Plugins folder content
+    data << "### Plugins Folder\n"
+    plugins_path = Sketchup.find_support_file('Plugins')
+    data << "Path: #{plugins_path}\n"
+    filter = File.join(plugins_path, '*')
+    content = Dir.glob(filter)
+    for item in content
+      basename = File.basename(item)
+      if File.directory?(item)
+        data << "[Folder] #{basename}\n"
+      else
+        data << "  [File] #{basename}\n"
+      end
+    end
+    data << SEPARATOR
+
+    # VirtuslStore
     if ENV['LOCALAPPDATA']
       data << "### VirtualStore\n"
       plugins_path = Sketchup.find_support_file('Plugins')
