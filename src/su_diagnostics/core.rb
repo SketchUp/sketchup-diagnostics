@@ -38,18 +38,23 @@ module Sketchup::Extensions::Diagnostics
 
   ### Extension ### ------------------------------------------------------------
 
-  KEY_SIZE  = 30
+  KEY_SIZE  = 40
   SEPARATOR = "\n".freeze
 
   # @since 1.0.0
   def self.collect_data
     data = ''
+    # Because UTF-8 conversion might fail, collect all data as binary data.
+    # SketchUp will try to display it correctly.
+    data.encode!("ASCII-8BIT") if data.respond_to?(:encode!)
+    #p [1, data.encoding]
 
     # SketchUp
     sketchup = 'SketchUp'
     sketchup << ' Pro' if Sketchup.is_pro?
     data << "#{sketchup} (#{Sketchup.version}) Diagnostic Information\n"
     data << SEPARATOR
+    #p [2, data.encoding]
 
     # Ruby
     data << "### Ruby\n"
@@ -58,22 +63,33 @@ module Sketchup::Extensions::Diagnostics
       data << "#{constant.to_s.ljust(KEY_SIZE)}: #{Object.const_get(constant)}\n"
     end
     data << SEPARATOR
+    #p [3, data.encoding]
 
     # Environment
     data << "### Environment\n"
     for key, value in ENV
-      if key.upcase == 'PATH'
-        paths = value.split(';')
-        data << "#{key.ljust(KEY_SIZE)}: #{paths.shift}\n"
+
+      key_utf8 = key.dup.force_encoding("ASCII-8BIT")
+      key_encoding = key.encoding.name.force_encoding("ASCII-8BIT")
+
+      value_utf8 = value.dup.force_encoding("ASCII-8BIT")
+      value_encoding = value.encoding.name.force_encoding("ASCII-8BIT")
+
+      key_info = "#{key_utf8} (#{key_encoding})"
+
+      if key_utf8.upcase == 'PATH'
+        paths = value_utf8.split(';')
+        data << "#{key_info.ljust(KEY_SIZE)}: #{paths.shift} (#{value_encoding})\n"
         indent = ' ' * KEY_SIZE
         for path in paths
-          data << "#{indent}  #{path}\n"
+          data << "#{indent}  #{path} (#{value_encoding})\n"
         end
       else
-        data << "#{key.ljust(KEY_SIZE)}: #{value}\n"
+        data << "#{key_info.ljust(KEY_SIZE)}: #{value_utf8} (#{value_encoding})\n"
       end
     end
     data << SEPARATOR
+    #p [4, data.encoding]
 
     # Extensions
     if Sketchup.respond_to?(:extensions)
@@ -90,45 +106,74 @@ module Sketchup::Extensions::Diagnostics
       data << "#{extension.name.ljust(KEY_SIZE)} (#{extension.version}) #{loaded}\n"
     end
     data << SEPARATOR
+    #p [5, data.encoding]
 
     # $LOAD_PATH
     data << "### $LOAD_PATH\n"
     for path in $LOAD_PATH
-      data << "#{path}\n"
+      if path.respond_to?(:encoding)
+        # (!) Might have to use force_encoding instead.
+        path_utf8 = path.dup.force_encoding("ASCII-8BIT")
+        path_encoding = path.encoding.name.force_encoding("ASCII-8BIT")
+        #puts '---'
+        #p path_utf8.encoding
+        #p path_encoding.encoding
+        #p data.encoding
+        data << "#{path_utf8} (#{path_encoding})\n"
+      else
+        data << "#{path}\n"
+      end
     end
     data << SEPARATOR
+    #p [6, data.encoding]
 
     # $LOADED_FEATURES
     data << "### $LOADED_FEATURES\n"
     for filename in $LOADED_FEATURES
-      data << "#{filename}\n"
+      if filename.respond_to?(:encoding)
+        # (!) Might have to use force_encoding instead.
+        filename_utf8 = filename.dup.force_encoding("ASCII-8BIT")
+        filename_encoding = filename.encoding.name.force_encoding("ASCII-8BIT")
+        data << "#{filename_utf8} (#{filename_encoding})\n"
+      else
+        data << "#{filename}\n"
+      end
     end
     data << SEPARATOR
+    #p [7, data.encoding]
 
     # Plugins folder content
     data << "### Plugins Folder\n"
     plugins_path = Sketchup.find_support_file('Plugins')
-    data << "Path: #{plugins_path}\n"
+    data << "Path: #{plugins_path}\n".force_encoding("ASCII-8BIT")
     filter = File.join(plugins_path, '*')
     content = Dir.glob(filter)
     for item in content
       basename = File.basename(item)
       if File.directory?(item)
-        data << "[Folder] #{basename}\n"
+        data << "[Folder] #{basename}\n".force_encoding("ASCII-8BIT")
       else
-        data << "  [File] #{basename}\n"
+        data << "  [File] #{basename}\n".force_encoding("ASCII-8BIT")
       end
     end
     data << SEPARATOR
+    #p [8, data.encoding]
 
-    # VirtuslStore
+    # VirtualStore
     if ENV['LOCALAPPDATA']
       data << "### VirtualStore\n"
       plugins_path = Sketchup.find_support_file('Plugins')
       virtualstore = File.join(ENV['LOCALAPPDATA'], 'VirtualStore')
+
+      plugins_path.force_encoding("ASCII-8BIT")
+      virtualstore.force_encoding("ASCII-8BIT")
+
       path = plugins_path.split(':')[1]
       virtual_path = File.join(virtualstore, path)
       virtual_path = File.expand_path(virtual_path)
+
+      virtual_path.force_encoding("UTF-8")
+
       if File.exist?( virtual_path )
         filter = File.join(virtual_path, '*')
         virtual_files = Dir.glob(filter).join("\n")
@@ -138,6 +183,12 @@ module Sketchup::Extensions::Diagnostics
       end
       data << SEPARATOR
     end
+    #p [9, data.encoding]
+
+    # Attempt to convert data to UTF-8 encoding.
+    test_data = data.dup
+    test_data.force_encoding("UTF-8")
+    data << "Valid UTF-8 encoding: #{test_data.valid_encoding?}"
 
     puts data
 
@@ -145,6 +196,7 @@ module Sketchup::Extensions::Diagnostics
     # Save results to file.
     if ENV['HOME']
       desktop_path = File.join(ENV['HOME'], 'Desktop')
+      desktop_path.force_encoding("UTF-8")
       unless File.exist?(desktop_path)
         desktop_path = nil
       end
