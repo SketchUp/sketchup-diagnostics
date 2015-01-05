@@ -60,7 +60,7 @@ module Sketchup::Extensions::Diagnostics
     data << "### Ruby\n"
     ruby_data = Object.constants.grep(/^RUBY_/).sort
     for constant in ruby_data
-      data << "#{constant.to_s.ljust(KEY_SIZE)}: #{Object.const_get(constant)}\n"
+      data << "#{constant.to_s.ljust(KEY_SIZE)}: #{Object.const_get(constant)}\n".force_encoding("ASCII-8BIT")
     end
     data << SEPARATOR
     #p [3, data.encoding]
@@ -79,13 +79,13 @@ module Sketchup::Extensions::Diagnostics
 
       if key_utf8.upcase == 'PATH'
         paths = value_utf8.split(';')
-        data << "#{key_info.ljust(KEY_SIZE)}: #{paths.shift} (#{value_encoding})\n"
+        data << "#{key_info.ljust(KEY_SIZE)}: #{paths.shift} (#{value_encoding})\n".force_encoding("ASCII-8BIT")
         indent = ' ' * KEY_SIZE
         for path in paths
-          data << "#{indent}  #{path} (#{value_encoding})\n"
+          data << "#{indent}  #{path} (#{value_encoding})\n".force_encoding("ASCII-8BIT")
         end
       else
-        data << "#{key_info.ljust(KEY_SIZE)}: #{value_utf8} (#{value_encoding})\n"
+        data << "#{key_info.ljust(KEY_SIZE)}: #{value_utf8} (#{value_encoding})\n".force_encoding("ASCII-8BIT")
       end
     end
     data << SEPARATOR
@@ -103,7 +103,7 @@ module Sketchup::Extensions::Diagnostics
     data << "### Extensions\n"
     for extension in extension
       loaded = (extension.respond_to?(:loaded?) && extension.loaded?) ? 'LOADED' : ''
-      data << "#{extension.name.ljust(KEY_SIZE)} (#{extension.version}) #{loaded}\n"
+      data << "#{extension.name.ljust(KEY_SIZE)} (#{extension.version}) #{loaded}\n".force_encoding("ASCII-8BIT")
     end
     data << SEPARATOR
     #p [5, data.encoding]
@@ -119,9 +119,9 @@ module Sketchup::Extensions::Diagnostics
         #p path_utf8.encoding
         #p path_encoding.encoding
         #p data.encoding
-        data << "#{path_utf8} (#{path_encoding})\n"
+        data << "#{path_utf8} (#{path_encoding})\n".force_encoding("ASCII-8BIT")
       else
-        data << "#{path}\n"
+        data << "#{path}\n".force_encoding("ASCII-8BIT")
       end
     end
     data << SEPARATOR
@@ -149,12 +149,16 @@ module Sketchup::Extensions::Diagnostics
     filter = File.join(plugins_path, '*')
     content = Dir.glob(filter)
     for item in content
+      filename_encoding = item.encoding.name.force_encoding("ASCII-8BIT")
       basename = File.basename(item)
+      basename.force_encoding("ASCII-8BIT")
       if File.directory?(item)
-        data << "[Folder] #{basename}\n".force_encoding("ASCII-8BIT")
+        file_item = "[Folder] #{basename} (#{filename_encoding})\n"
       else
-        data << "  [File] #{basename}\n".force_encoding("ASCII-8BIT")
+        file_item = "  [File] #{basename} (#{filename_encoding})\n"
       end
+      file_item.force_encoding("ASCII-8BIT")
+      data << file_item
     end
     data << SEPARATOR
     #p [8, data.encoding]
@@ -184,6 +188,7 @@ module Sketchup::Extensions::Diagnostics
       data << SEPARATOR
     end
     #p [9, data.encoding]
+  ensure
 
     # Attempt to convert data to UTF-8 encoding.
     test_data = data.dup
